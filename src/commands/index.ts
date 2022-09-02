@@ -1,3 +1,5 @@
-import Ping from "./ping";
+import ping from "./ping";
+import play from "./play";
+import yt from "./yt";
 
-export default [Ping];
+export default [ping, yt, play];
