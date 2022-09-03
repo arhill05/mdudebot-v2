@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "ts-node src/index.ts",
-    "register-commands": "ts-node src/registerCommands.ts"
+    "register-commands": "ts-node src/registerCommands.ts",
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",
