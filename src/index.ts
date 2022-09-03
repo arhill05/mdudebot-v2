@@ -11,6 +11,7 @@ import commands from "./commands";
 import { Command } from "./models/Command";
 import Session from "./services/Session";
 import onPlayAutocompleteInteraction from "./services/sfxAutocomplete";
+import VoiceConnectionManager from "./services/VoiceConnectionManager";
 
 console.log("Bot is starting...");
 
@@ -28,6 +29,7 @@ commands.forEach((command) =>
 );
 
 const sessions = new Collection<string, Session>();
+const voiceConnectionManager = new VoiceConnectionManager();
 const start = async () => {
   client.once("ready", () => {
     console.log("Bot is ready!");
@@ -49,9 +51,13 @@ const start = async () => {
     }
 
     try {
-      await command.execute(interaction, sessions);
-    } catch (error) {
-      await interaction.reply({ content: "error!", ephemeral: true });
+      await command.execute(interaction, voiceConnectionManager);
+    } catch (error: any) {
+      if (interaction.isRepliable() && !interaction.deferred) {
+        await interaction.reply({ content: "error! " + error.toString() });
+      } else {
+        await interaction.editReply({ content: "error! " + error.toString() });
+      }
     }
   });
 

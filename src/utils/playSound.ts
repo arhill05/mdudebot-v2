@@ -2,6 +2,7 @@ import {
   AudioPlayerStatus,
   AudioResource,
   createAudioPlayer,
+  createAudioResource,
   entersState,
   joinVoiceChannel,
   NoSubscriberBehavior,
@@ -12,42 +13,27 @@ import {
   ChatInputCommandInteraction,
   VoiceChannel,
 } from "discord.js";
+import { createReadStream } from "fs";
+import path from "path";
+const SOUNDS_PATH = path.resolve(__dirname, "../sounds");
+
+import VoiceConnectionManager from "../services/VoiceConnectionManager";
 
 export async function playSound(
   voiceChannel: VoiceChannel,
-  interaction: ChatInputCommandInteraction | ButtonInteraction,
-  audioResource: AudioResource
+  voiceConnectionManager: VoiceConnectionManager,
+  soundName: string,
+  volume: number | null
 ) {
-  await interaction.deferReply();
-  const player = createAudioPlayer({
-    debug: true,
-    behaviors: { noSubscriber: NoSubscriberBehavior.Stop },
-  });
-
-  const connection = joinVoiceChannel({
-    channelId: voiceChannel.id,
-    guildId: voiceChannel.guildId,
-    adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-  });
-
-  await entersState(connection, VoiceConnectionStatus.Ready, 30000);
-  connection.subscribe(player);
-
-  player.on("error", console.error);
-  connection.on("error", console.error);
-  connection.on("debug", console.info);
-  player.on("stateChange", async (oldState, newState) => {
-    if (
-      oldState.status === AudioPlayerStatus.Playing &&
-      newState.status === AudioPlayerStatus.Idle
-    ) {
-      // todo: allow multiple sequential commands
-      connection.disconnect();
-    }
-  });
-
-  await player.play(audioResource);
-  await interaction.editReply(`Playing!`);
+  const audioResource = createAudioResource(
+    createReadStream(`${SOUNDS_PATH}/${soundName}.mp3`),
+    { inlineVolume: true }
+  );
+  if (volume !== null) {
+    audioResource.volume?.setVolume(volume);
+  }
+  await voiceConnectionManager.tryConnectToChannel(voiceChannel);
+  await voiceConnectionManager.playSound(audioResource);
 }
 
 export default playSound;

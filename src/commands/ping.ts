@@ -25,18 +25,6 @@ export const ping: Command = {
       return;
     }
 
-    const voiceChannel = (interaction.member as GuildMember).voice
-      .channel as VoiceChannel;
-
-    const sessionKey = interaction.guildId;
-
-    let session = sessions.get(sessionKey);
-
-    if (!session) {
-      sessions.set(sessionKey, new Session(voiceChannel));
-      session = sessions.get(sessionKey);
-    }
-
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId("leave-channel")
@@ -50,7 +38,7 @@ export const ping: Command = {
       });
 
     leaveChannelButtonCollector?.on("collect", async (i) => {
-      session?.stop();
+      // session?.stop();
       i.update({ content: "I'm no longer in your channel!", components: [] });
       leaveChannelButtonCollector.dispose(i);
     });

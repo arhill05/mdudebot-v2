@@ -15,7 +15,7 @@ const fetchYouTubeVideo = async (url: string): Promise<YouTubeVideoResult> => {
     highWaterMark: 1 << 25,
     quality: "highestaudio",
   });
-  const audioResource = createAudioResource(stream);
+  const audioResource = createAudioResource(stream, { inlineVolume: true });
 
   return {
     name: info.videoDetails.title,

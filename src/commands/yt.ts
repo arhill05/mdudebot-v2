@@ -23,6 +23,7 @@ import {
 } from "@discordjs/voice";
 import Session from "../services/Session";
 import fetchYouTubeVideo from "../utils/youTubeVideoFetcher";
+import VoiceConnectionManager from "../services/VoiceConnectionManager";
 export const yt: Command = {
   command: new SlashCommandBuilder()
     .setName("yt")
@@ -32,8 +33,18 @@ export const yt: Command = {
         .setDescription("The URL of the video to play")
         .setRequired(true)
     )
+    .addNumberOption((option) =>
+      option
+        .setName("volume")
+        .setDescription("The volume to play the sound at")
+        .setMaxValue(100)
+        .setMinValue(0)
+    )
     .setDescription("Plays a video from YouTube given a url"),
-  execute: async (interaction: ChatInputCommandInteraction, sessions) => {
+  execute: async (
+    interaction: ChatInputCommandInteraction,
+    voiceConnectionManager: VoiceConnectionManager
+  ) => {
     if (!interaction.guildId || !interaction.member) {
       return;
     }
@@ -41,78 +52,36 @@ export const yt: Command = {
     const voiceChannel = (interaction.member as GuildMember).voice
       .channel as VoiceChannel;
 
-    await playSound(voiceChannel, interaction);
+    await playSound(voiceChannel, interaction, voiceConnectionManager);
   },
 };
 
 async function playSound(
   voiceChannel: VoiceChannel,
   interaction: ChatInputCommandInteraction | ButtonInteraction,
-  videoUrl?: string
+  voiceConnectionManager: VoiceConnectionManager
 ) {
   await interaction.deferReply();
-  const player = createAudioPlayer({
-    debug: true,
-    behaviors: { noSubscriber: NoSubscriberBehavior.Stop },
-  });
 
-  const connection = joinVoiceChannel({
-    channelId: voiceChannel.id,
-    guildId: voiceChannel.guildId,
-    adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-  });
-
-  await entersState(connection, VoiceConnectionStatus.Ready, 30000);
-  connection.subscribe(player);
-
-  const url =
-    videoUrl ??
-    ((interaction as ChatInputCommandInteraction).options.getString(
-      "video-url"
-    ) as string);
+  const url = (interaction as ChatInputCommandInteraction).options.getString(
+    "video-url"
+  ) as string;
   const youtubeVideo = await fetchYouTubeVideo(url as string);
 
-  player.on("error", console.error);
-  connection.on("error", console.error);
-  connection.on("debug", console.info);
-  player.on("stateChange", async (oldState, newState) => {
-    if (
-      oldState.status === AudioPlayerStatus.Playing &&
-      newState.status === AudioPlayerStatus.Idle
-    ) {
-      connection.destroy();
-      await playerDoneCallback(interaction, voiceChannel, url);
-    }
-  });
+  const volume = (interaction as ChatInputCommandInteraction).options.getNumber(
+    "volume"
+  );
 
-  await player.play(youtubeVideo.stream);
+  if (volume !== null) {
+    youtubeVideo.stream.volume?.setVolume(volume);
+  }
+
+  await voiceConnectionManager.tryConnectToChannel(voiceChannel);
+  await voiceConnectionManager.playSound(youtubeVideo.stream);
+
   await interaction.editReply(
     `Playing ${youtubeVideo.name} - Length: ${youtubeVideo.duration}s - Link: ${youtubeVideo.link}`
   );
-}
-
-async function playerDoneCallback(
-  interaction: ChatInputCommandInteraction | ButtonInteraction,
-  voiceChannel: VoiceChannel,
-  videoUrl: string
-) {
-  // todo: implement play again button
-  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId("play-again")
-      .setLabel("Play again")
-      .setStyle(ButtonStyle.Primary)
-  );
-  const playAgainButtonCollector =
-    interaction.channel?.createMessageComponentCollector({
-      filter: (i) => i.customId === "play-again",
-    });
-
-  playAgainButtonCollector?.on("collect", async function (buttonInteraction) {
-    playSound(voiceChannel, buttonInteraction as ButtonInteraction, videoUrl);
-    playAgainButtonCollector.dispose(buttonInteraction);
-  });
-  await interaction.editReply({ content: "Done playing", components: [] });
 }
 
 export default yt;

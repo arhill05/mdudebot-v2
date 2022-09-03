@@ -7,7 +7,11 @@ const onPlayAutocompleteInteraction = async (
   const focusedValue = interaction.options.getFocused();
   const choices = await getAvailableSounds();
   const filtered = (await choices)
-    .filter((choice) => choice.startsWith(focusedValue))
+    .filter(
+      (choice) =>
+        choice.startsWith(focusedValue) ||
+        choice.toLowerCase() === focusedValue.toLowerCase()
+    )
     .slice(0, 25);
   await interaction.respond(
     filtered.map((choice) => ({ name: choice, value: choice }))
