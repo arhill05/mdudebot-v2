@@ -30,6 +30,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd /srv/mdudebot-v2/
+            nvm current
             git pull
             npm install
             npm run build
