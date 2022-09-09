@@ -33,27 +33,26 @@ export const play: Command = {
     )
     .setDescription("Plays a sound effect"),
   execute: async (
-    interaction: ChatInputCommandInteraction,
+    initialInteraction: ChatInputCommandInteraction,
     voiceConnectionManager
   ) => {
-    await interaction.deferReply();
-    if (!interaction.guildId) {
-      return;
-    }
-    if (!interaction.member) {
+    await initialInteraction.deferReply();
+    if (!initialInteraction.guildId || !initialInteraction.member) {
       return;
     }
 
-    const voiceChannel = (interaction.member as GuildMember).voice
+    const voiceChannel = (initialInteraction.member as GuildMember).voice
       .channel as VoiceChannel;
 
-    const soundName = interaction.options.getString("name") as string;
+    const soundName = initialInteraction.options.getString("name") as string;
 
-    const volume = interaction.options.getNumber("volume");
+    const volume = initialInteraction.options.getNumber("volume");
+
+    const playAgainButtonId = `play-${soundName.replaceAll(" ", "")}-again`;
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
-        .setCustomId("play-again")
+        .setCustomId(playAgainButtonId)
         .setLabel("Play again")
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
@@ -62,33 +61,36 @@ export const play: Command = {
         .setStyle(ButtonStyle.Danger)
     );
 
+    const initialMessage = await initialInteraction.fetchReply();
     const playAgainButtonCollector =
-      interaction.channel?.createMessageComponentCollector({
-        filter: (i) => i.customId === "play-again",
+      initialInteraction.channel?.createMessageComponentCollector({
+        filter: (i) => i.customId === playAgainButtonId,
+        message: initialMessage,
       });
 
     playAgainButtonCollector?.on("collect", async (i) => {
       await playSound(voiceChannel, voiceConnectionManager, soundName, volume);
-      i.reply({ content: `Playing '${soundName}' again...` });
-      await setTimeout(1000);
-      i.deleteReply();
+      await i.reply({
+        content: `Playing '${soundName}' again...`,
+      });
+      await i.deleteReply();
     });
 
     const stopButtonCollector =
-      interaction.channel?.createMessageComponentCollector({
+      initialInteraction.channel?.createMessageComponentCollector({
         filter: (i) => i.customId === "stop",
+        message: initialMessage,
       });
 
     stopButtonCollector?.on("collect", async (i) => {
       await voiceConnectionManager.disconnectAllConnections();
       i.reply({ content: `Stopping '${soundName}'` });
-      await setTimeout(1000);
       i.deleteReply();
     });
 
     await playSound(voiceChannel, voiceConnectionManager, soundName, volume);
 
-    await interaction.editReply({
+    await initialInteraction.editReply({
       content: `Playing ${soundName}!`,
       components: [row],
     });
