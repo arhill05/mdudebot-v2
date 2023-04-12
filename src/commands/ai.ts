@@ -1,4 +1,5 @@
 import { createAudioResource } from "@discordjs/voice";
+import { randomUUID } from "crypto";
 import {
   ChatInputCommandInteraction,
   GuildMember,
@@ -33,10 +34,9 @@ export const ai: Command = {
 
     const audioStream = await getAudioStreamForText(text);
 
-    const soundPath = `${path.resolve(__dirname, "../sounds")}/${text.replace(
-      " ",
-      ""
-    )}.mp3`;
+    const fileName = `ai-${randomUUID()}`;
+
+    const soundPath = `${path.resolve(__dirname, "../sounds")}/${fileName}.mp3`;
 
     await fs.writeFile(soundPath, audioStream);
     const audioResource = createAudioResource(soundPath);
