@@ -4,6 +4,7 @@ import {
   AudioPlayerStatus,
   AudioResource,
   createAudioPlayer,
+  DiscordGatewayAdapterCreator,
   entersState,
   joinVoiceChannel,
   NoSubscriberBehavior,
@@ -35,7 +36,7 @@ export default class VoiceConnectionManager {
       this.connection = await joinVoiceChannel({
         channelId: voiceChannel.id,
         guildId: voiceChannel.guild.id,
-        adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+        adapterCreator: voiceChannel.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator,
       });
 
       await entersState(this.connection, VoiceConnectionStatus.Ready, 30_000);

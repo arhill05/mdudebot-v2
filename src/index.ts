@@ -1,3 +1,4 @@
+import { generateDependencyReport } from "@discordjs/voice";
 import {
   ChatInputCommandInteraction,
   Client,
@@ -31,6 +32,7 @@ commands.forEach((command) =>
 const sessions = new Collection<string, Session>();
 const voiceConnectionManager = new VoiceConnectionManager();
 const start = async () => {
+  console.log(generateDependencyReport());
   client.once("ready", () => {
     console.log("Bot is ready!");
   });
